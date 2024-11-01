@@ -1,0 +1,186 @@
+#install.packages("qmap")
+#install.packages("fitdistrplus")
+#install.packages("MASS")
+#install.packages("survival")
+#library(fitdistrplus) 
+#library(MASS)
+#library(survival)
+#library(qmap)
+savepath="/Users/sajal/Desktop/New_project/precipitation/bias_correction/10_MIROC6-r1i1p1f1/1320"
+savepath1 <- paste(savepath, "Historical/", sep = "/")
+savepath2 <- paste(savepath, "ssp245/", sep = "/")
+savepath3 <- paste(savepath, "ssp585/", sep = "/")
+obs=read.csv("/Users/sajal/Desktop/New_project/Observed/Filled_Precipitation_Data/1320_dna.csv")
+names(obs)[names(obs)==colnames(obs)[1]]<-"Date"
+obs$Date <- format(as.Date(obs$Date,format="%Y-%m-%d"),"%d-%m-%Y")
+row.names(obs)<-obs$Date
+obs$Date<-NULL
+#obs<-head(obs, 18980)
+
+his=read.csv("/Users/sajal/Desktop/New_project/precipitation/gcm_extraction/10_MIROC6-r1i1p1f1/nepal_pr_day_MIROC6_historical_r1i1p1f1_gn_19700101-20141231/1320.csv")
+names(his)[names(his)==colnames(his)[1]]<-"Date"
+his$Date <- as.Date(his$Date)
+his <- subset(his, Date >= as.Date("1980-01-01") & Date <= as.Date("2014-12-31"))
+his$Date <- format(as.Date(his$Date,format="%Y-%m-%d"),"%d-%m-%Y")
+row.names(his)<-his$Date
+#his$X<-NULL
+his$Date<-NULL
+his['Precipitation']<-round(his['Precipitation'],2)
+ssp245=read.csv("/Users/sajal/Desktop/New_project/precipitation/gcm_extraction/10_MIROC6-r1i1p1f1/nepal_pr_day_MIROC6_ssp245_r1i1p1f1_gn_20150101-21001231/1320.csv")
+names(ssp245)[names(ssp245)==colnames(ssp245)[1]]<-"Date"
+ssp245$Date<-format(as.Date(ssp245$Date,format="%Y-%m-%d"),"%d-%m-%Y")
+row.names(ssp245)<-ssp245$Date
+
+ssp245$Date<-NULL
+#ssp245$X<-NULL
+ssp245$Precipitation.Flux<-NULL
+ssp245['Precipitation']<-round(ssp245['Precipitation'],3)
+ssp585=read.csv("/Users/sajal/Desktop/New_project/precipitation/gcm_extraction/10_MIROC6-r1i1p1f1/nepal_pr_day_MIROC6_ssp585_r1i1p1f1_gn_20150101-21001231/1320.csv")
+names(ssp585)[names(ssp585)==colnames(ssp585)[1]]<-"Date"
+ssp585$Date<-format(as.Date(ssp585$Date,format="%Y-%m-%d"),"%d-%m-%Y")
+row.names(ssp585)<-ssp585$Date
+ssp585$Date<-NULL
+#ssp585$X<-NULL
+ssp585$Precipitation.Flux<-NULL
+ssp585['Precipitation']<-round(ssp585['Precipitation'],3)
+#DIST Bernoulli Gamma
+qm.fit <- fitQmapDIST(obs,his,
+                      distr="berngamma",
+                      qstep=0.001)
+qm <- doQmapDIST(his,qm.fit)
+qm245 <- doQmapDIST(ssp245,qm.fit)
+qm585 <- doQmapDIST(ssp585,qm.fit)
+write.csv(qm,paste(savepath1,"1320_DISTmodprecip_01berngamma.csv"), row.names = TRUE)    
+write.csv(qm245,paste(savepath2,"1320_DISTssp245_01berngamma.csv"), row.names = TRUE)    
+write.csv(qm585,paste(savepath3,"1320_DISTssp585_01berngamma.csv"), row.names = TRUE)   
+
+#DIST Bernoulli Weibull
+qm.wei.fit <- fitQmapDIST(obs,his,
+                          distr="bernweibull",
+                          qstep=0.001)
+qm.wei <- doQmapDIST(his,qm.wei.fit)
+qm.weissp245 <- doQmapDIST(ssp245,qm.wei.fit)
+qm.weissp585 <- doQmapDIST(ssp585,qm.wei.fit)
+write.csv(qm.wei,paste(savepath1,"1320_DISTmodprecip_01bernweibull.csv"), row.names = TRUE)    
+write.csv(qm.weissp245,paste(savepath2,"1320_DISTssp245_01bernweibull.csv"), row.names = TRUE)    
+write.csv(qm.weissp585,paste(savepath3,"1320_DISTssp585_01bernweibull.csv"), row.names = TRUE)
+
+#DIST Bernoulli lognormal
+qm.lnorm.fit <- fitQmapDIST(obs,his,
+                            distr="bernlnorm",
+                            qstep=0.001)
+qm.lnorm <- doQmapDIST(his,qm.lnorm.fit)
+qm.lnormssp245 <- doQmapDIST(ssp245,qm.lnorm.fit)
+qm.lnormssp585 <- doQmapDIST(ssp585,qm.lnorm.fit)
+write.csv(qm.lnorm,paste(savepath1,"1320_DISTmodprecip_01lognormal.csv"), row.names = TRUE)    
+write.csv(qm.lnormssp245,paste(savepath2,"1320_DISTssp245_01lognormal.csv"), row.names = TRUE)    
+write.csv(qm.lnormssp585,paste(savepath3,"1320_DISTssp585_01lognormal.csv"), row.names = TRUE)
+
+#Bernoulli Exponential
+qm.exp.fit <- fitQmapDIST(sqrt(obs),sqrt(his),
+                          distr="bernexp",
+                          qstep=0.001)
+qm.exp <- doQmapDIST(sqrt(his),qm.exp.fit)^2
+qm.expssp245 <- doQmapDIST(sqrt(ssp245),qm.exp.fit)^2
+qm.expssp585 <- doQmapDIST(sqrt(ssp585),qm.exp.fit)^2
+write.csv(qm.exp,paste(savepath1,"1320_DISTmodprecip_01bernexp.csv"), row.names = TRUE)   
+write.csv(qm.expssp245,paste(savepath2,"1320_DISTssp245_01bernexp.csv"), row.names = TRUE)  
+write.csv(qm.expssp585,paste(savepath3,"1320_DISTssp585_01bernexp.csv"), row.names = TRUE)  
+
+#PowPTF
+qm.ptf.pow<- fitQmapPTF(obs,his,
+                        transfun="power.x0",
+                        cost="RSS",wet.day=TRUE,
+                        qstep=0.001)
+qm.pow <- doQmapPTF(his,qm.ptf.pow)
+qm.pow.ssp245 <- doQmapPTF((ssp245),qm.ptf.pow)
+qm.pow.ssp585 <- doQmapPTF((ssp585),qm.ptf.pow)
+write.csv(qm.pow,paste(savepath1,"1320_PTFmodprecip_01_pow.csv"), row.names = TRUE)   
+write.csv(qm.pow.ssp245,paste(savepath2,"1320_PTFssp245_01_pow.csv"), row.names = TRUE)  
+write.csv(qm.pow.ssp585,paste(savepath3,"1320_PTFssp585_01_pow.csv"), row.names = TRUE)  
+
+#expasympPTF
+qm.ptf.expasym<- fitQmapPTF(obs,his,
+                            transfun="expasympt.x0",
+                            cost="RSS",wet.day=0.01,
+                            qstep=0.001)
+qm.expasym <- doQmapPTF(his,qm.ptf.expasym)
+qm.expasym.ssp245 <- doQmapPTF((ssp245),qm.ptf.expasym)
+qm.expasym.ssp585 <- doQmapPTF((ssp585),qm.ptf.expasym)
+write.csv(qm.expasym,paste(savepath1,"1320_PTFmodprecip_01_expasym.csv"), row.names = TRUE)   
+write.csv(qm.expasym.ssp245,paste(savepath2,"1320_PTFssp245_01_expasym.csv"), row.names = TRUE)  
+write.csv(qm.expasym.ssp585,paste(savepath3,"1320_PTFssp585_01_expasym.csv"), row.names = TRUE)
+
+#linear
+qm.ptf.lin<- fitQmapPTF(obs,his,
+                        transfun="linear",
+                        cost="RSS",wet.day=0.01,
+                        qstep=0.001)
+qm.lin <- doQmapPTF(his,qm.ptf.lin)
+qm.lin.ssp245 <- doQmapPTF((ssp245),qm.ptf.lin)
+qm.lin.ssp585 <- doQmapPTF((ssp585),qm.ptf.lin)
+write.csv(qm.lin,paste(savepath1,"1320_PTFmodprecip_01_lin.csv"), row.names = TRUE)   
+write.csv(qm.lin.ssp245,paste(savepath2,"1320_PTFssp245_01_lin.csv"), row.names = TRUE)  
+write.csv(qm.lin.ssp585,paste(savepath3,"1320_PTFssp585_01_lin.csv"), row.names = TRUE)
+
+#scale
+qm.ptf.scl<- fitQmapPTF(obs,his,
+                        transfun="scale",
+                        cost="RSS",wet.day=0.01,
+                        qstep=0.001)
+qm.scl <- doQmapPTF(his,qm.ptf.scl)
+qm.scl.ssp245 <- doQmapPTF((ssp245),qm.ptf.scl)
+qm.scl.ssp585 <- doQmapPTF((ssp585),qm.ptf.scl)
+write.csv(qm.scl,paste(savepath1,"1320_PTFmodprecip_01_scl.csv"), row.names = TRUE)   
+write.csv(qm.scl.ssp245,paste(savepath2,"1320_PTFssp245_01_scl.csv"), row.names = TRUE)  
+write.csv(qm.scl.ssp585,paste(savepath3,"1320_PTFssp585_01_scl.csv"), row.names = TRUE)
+
+#Non-parametric quantile mapping using empirical quantiles_LINEAR
+qm.fit.emp <- fitQmapQUANT(obs,his,
+                           qstep=0.1,nboot=1,wet.day=TRUE)
+qm.emp <- doQmapQUANT(his,qm.fit.emp,type="linear")
+qm.emp.ssp245 <- doQmapQUANT((ssp245),qm.fit.emp,type="linear")
+qm.emp.ssp585 <- doQmapQUANT((ssp585),qm.fit.emp,type="linear")
+write.csv(qm.emp,paste(savepath1,"1320_NonPmodprecip_01_emplin.csv"), row.names = TRUE)   
+write.csv(qm.emp.ssp245,paste(savepath2,"1320_NonPTFssp245_01_emplin.csv"), row.names = TRUE)  
+write.csv(qm.emp.ssp585,paste(savepath3,"1320_NonPTFssp585_01_emplin.csv"), row.names = TRUE)
+
+#Non-parametric quantile mapping using empirical quantiles_tricub
+qm.fit.emptricub <- fitQmapQUANT(obs,his,
+                                 qstep=0.1,nboot=1,wet.day=TRUE)
+qm.emptricub <- doQmapQUANT(his,qm.fit.emptricub,type="tricub")
+qm.emptricub.ssp245 <- doQmapQUANT((ssp245),qm.fit.emptricub,type="tricub")
+qm.emptricub.ssp585 <- doQmapQUANT((ssp585),qm.fit.emptricub,type="tricub")
+write.csv(qm.emptricub,paste(savepath1,"1320_NonPmodprecip_01_tricub.csv"), row.names = TRUE)   
+write.csv(qm.emptricub.ssp245,paste(savepath2,"1320_NonPTFssp245_01_tricub.csv"), row.names = TRUE)  
+write.csv(qm.emptricub.ssp585,paste(savepath3,"1320_NonPTFssp585_01_tricub.csv"), row.names = TRUE)
+
+#Non-parametric quantile mapping using robust empirical quantiles_lin.
+qm.fit.remplin <- fitQmapRQUANT(obs,his,
+                                qstep=0.1,nboot=10,wet.day=TRUE)
+qm.remplin <- doQmapRQUANT(his,qm.fit.remplin,type="linear")
+qm.remplin.ssp245 <- doQmapRQUANT(ssp245,qm.fit.remplin,type="linear")
+qm.remplin.ssp585 <- doQmapRQUANT(ssp585,qm.fit.remplin,type="linear")
+write.csv(qm.remplin,paste(savepath1,"1320_Rquanmodprecip_01_remplin.csv"), row.names = TRUE)   
+write.csv(qm.remplin.ssp245,paste(savepath2,"1320_Rquanssp245_01_remplin.csv"), row.names = TRUE)  
+write.csv(qm.remplin.ssp585,paste(savepath3,"1320_Rquanssp585_01_remplin.csv"), row.names = TRUE)
+
+#Non-parametric quantile mapping using robust empirical quantiles_tricub.
+qm.fit.remptricub <- fitQmapRQUANT(obs,his,
+                                   qstep=0.1,nboot=10,wet.day=TRUE)
+qm.remptricub <- doQmapRQUANT(his,qm.fit.remptricub,type="tricub")
+qm.remptricub.ssp245 <- doQmapRQUANT(ssp245,qm.fit.remptricub,type="tricub")
+qm.remptricub.ssp585 <- doQmapRQUANT(ssp585,qm.fit.remptricub,type="tricub")
+write.csv(qm.remptricub,paste(savepath1,"1320_Rquanmodprecip_01_remptricub.csv"), row.names = TRUE)   
+write.csv(qm.remptricub.ssp245,paste(savepath2,"1320_Rquanssp245_01_remptricub.csv"), row.names = TRUE)  
+write.csv(qm.remptricub.ssp585,paste(savepath3,"1320_Rquanssp585_01_remptricub.csv"), row.names = TRUE)
+
+#Quantile mapping using a smoothing spline
+qm.fit.spline <- fitQmapSSPLIN(obs,his,
+                               qstep=0.01,wet.day=TRUE)
+qm.spline <- doQmapSSPLIN(his,qm.fit.spline)
+qm.spline.ssp245 <- doQmapSSPLIN(ssp245,qm.fit.spline)
+qm.spline.ssp585 <- doQmapSSPLIN(ssp585,qm.fit.spline)
+write.csv(qm.spline,paste(savepath1,"1320_splinemodprecip_01_.csv"), row.names = TRUE)   
+write.csv(qm.spline.ssp245,paste(savepath2,"1320_splinessp245_01_.csv"), row.names = TRUE)  
+write.csv(qm.spline.ssp585,paste(savepath3,"1320_splinessp585_01_.csv"), row.names = TRUE)

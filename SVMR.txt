@@ -1,0 +1,80 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.svm import SVR
+from sklearn.metrics import r2_score
+import joblib
+
+# Load your dataset (adjust the file path as needed)
+df = pd.read_csv(r'C:\Users\ishan\Downloads\New_Data.csv')
+
+# Identify numerical columns that may have commas
+numeric_columns = df.select_dtypes(include=['object']).columns.tolist()
+
+# Remove commas from numeric columns and convert to float
+for col in numeric_columns:
+    df[col] = df[col].str.replace(',', '').astype(float)
+
+# Drop rows with NaN values in specific columns
+specimens_with_nan = df[df['VMA (%)'].isna()].index.tolist()
+df.dropna(subset=['VMA (%)'], inplace=True)
+
+print(f"Dropping rows with NaN in VMA (%) for specimens: {specimens_with_nan}")
+
+# Define features (X) using all specified available columns
+X = df[[' Fiber (%v0l)', 'Fiber Length (mm)', 'Fiber Diameter (mm)', 'Fiber Aspect Ratio',
+         'Fiber Tensile strength (Mpa)', 'Fiber Elastic modulus (Mpa)', 'Fiber Density (kg/m3)',
+         'Quarry dust (kg/m3)', 'OPC (kg/m3)', 'Silica fume (kg/m3)', 'Rubber (kg/m3)',
+         'Epoxy (kg/m3)', 'Rapid Hardening Cement (Kg/m3)', 'PPC', 'Slag', 'Fly ash', 'Medium sand',
+         'FS sand', 'Aggregate', 'Low-grade calcined clay (LCC)', 'High-grade calcined clay (HPCC)',
+         'Limestone filler (LF)', 'Viscosity modifying admixture (VMA)', 'GGBS (Ground granulated blast furnace)',
+         'Alkaline reagent', 'Quartz Sand', 'RS (Kg/m3)-River sand', 'Nano Clay', 'LP (Kg/m3)-(Limestone powder)',
+         'Fine Aggregate (Kg/m3)', 'Water (kg/m3)', 'Fiber', 'VMA', 'Superplasticizer (Kg/m3)', 'Sand 1',
+         'Sand 2', 'Quartz powder', 'Marble powder', 'Attapulgite clay ', 'FAC (KG/M3)-class C fly ash',
+         'FAF (KG/M3)-class F fly ash', 'MS (kg/m3)- masonry sand', 'Water Reduction Agent (% by volume)',
+         'Expensive agent (% by volume)', 'HPMC- Hydroxypropyl methylcellulose', 'actigel (kg/Cu m)',
+         'bentonite (kg/cu.m)', 'K2Sio3 (kg/cu.m)', 'KOH (Kg/cu.m)', 'sodium lignosulfonate (kg/cu.m)',
+         'VMA (%)', 'K-Silicate (kg/m3)']]  # Ensure these column names match exactly with your dataset
+
+# Define target variable (y)
+y = df['Compressive stress (Mpa)']  # Directly as a Series
+
+# Split data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# (Rest of your code remains unchanged)
+
+# Define preprocessing for numeric and categorical features
+numeric_features = X.select_dtypes(include=['float64', 'int64']).columns.tolist()  # all numeric columns
+categorical_features = X.select_dtypes(include=['object']).columns.tolist()  # all categorical columns
+
+# Create transformers for preprocessing
+numeric_transformer = Pipeline(steps=[('scaler', StandardScaler())])
+
+categorical_transformer = Pipeline(steps=[('onehot', OneHotEncoder(handle_unknown='ignore'))])
+
+# Combine transformers using ColumnTransformer
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', numeric_transformer, numeric_features),
+        ('cat', categorical_transformer, categorical_features)
+    ])
+
+# Create the full pipeline with SVR
+model = Pipeline(steps=[('preprocessor', preprocessor),
+                         ('regressor', SVR(kernel='linear'))])  # Change the kernel as needed
+
+# Fit the model
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+# Evaluate the model using R-squared
+r2 = r2_score(y_test, y_pred)
+print(f'R-squared: {r2}')
+
+
